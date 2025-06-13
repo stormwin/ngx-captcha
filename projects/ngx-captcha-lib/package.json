@@ -1,6 +1,6 @@
 {
   "name": "ngx-captcha",
-  "version": "13.0.0",
+  "version": "20.0.0",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -27,7 +27,7 @@
     "prevent-publish": "node prevent-publish"
   },
   "peerDependencies": {
-    "@angular/common": ">= 15.0.0",
-    "@angular/core": ">= 15.0.0"
+    "@angular/common": ">= 20.0.0",
+    "@angular/core": ">= 20.0.0"
   }
 }

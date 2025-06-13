@@ -122,7 +122,8 @@
           },
           "configurations": {
             "production": {
-              "project": "projects/ngx-captcha-lib/ng-package.prod.json"
+              "project": "projects/ngx-captcha-lib/ng-package.prod.json",
+              "tsConfig": "projects/ngx-captcha-lib/tsconfig.lib.prod.json"
             }
           }
         },

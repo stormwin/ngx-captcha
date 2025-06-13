@@ -1,22 +1,25 @@
 import {
-  AfterViewChecked,
-  AfterViewInit,
-  Directive,
-  ElementRef,
-  EventEmitter,
-  InjectFlags,
-  Injector,
-  Input,
-  NgZone,
-  OnChanges,
-  Output,
-  Renderer2,
-  SimpleChanges,
+	AfterViewChecked,
+	AfterViewInit,
+	Directive,
+	ElementRef,
+	EventEmitter,
+	inject,
+	Injector,
+	input,
+	Input,
+	NgZone,
+	OnChanges,
+	output,
+	Output,
+	Renderer2,
+	Signal,
+	SimpleChanges,
 } from "@angular/core";
 import {
-  AbstractControl,
-  ControlValueAccessor,
-  NgControl,
+	AbstractControl,
+	ControlValueAccessor,
+	NgControl,
 } from "@angular/forms";
 
 import { ReCaptchaType } from "../models/recaptcha-type.enum";
@@ -24,409 +27,399 @@ import { ScriptService } from "../services/script.service";
 
 @Directive()
 export abstract class BaseReCaptchaComponentDirective
-  implements OnChanges, ControlValueAccessor, AfterViewInit, AfterViewChecked
-{
-  /**
-   * Prefix of the captcha element
-   */
-  protected readonly captchaElemPrefix = "ngx_captcha_id_";
+	implements OnChanges, ControlValueAccessor, AfterViewInit, AfterViewChecked {
+	/**
+	 * Prefix of the captcha element
+	 */
+	protected readonly captchaElemPrefix = "ngx_captcha_id_";
 
-  private setupCaptcha: boolean = true;
+	#setupCaptcha: boolean = true;
 
-  /**
-   * Google's site key.
-   * You can find this under https://www.google.com/recaptcha
-   */
-  @Input() siteKey?: string;
+	/**
+	 * Google's site key.
+	 * You can find this under https://www.google.com/recaptcha
+	 */
+	readonly siteKey = input<string>();
 
-  /**
-   * Indicates if global domain 'recaptcha.net' should be used instead of default domain ('google.com')
-   */
-  @Input() useGlobalDomain: boolean = false;
+	/**
+	 * Indicates if global domain 'recaptcha.net' should be used instead of default domain ('google.com')
+	 */
+	readonly useGlobalDomain = input<boolean>(false);
 
-  @Input() useEnterprise: boolean = false;
+	readonly useEnterprise = input<boolean>(false);
 
-  /**
-   * Type
-   */
-  @Input() type: "audio" | "image" = "image";
+	/**
+	 * Type
+	 */
+	readonly type = input<"audio" | "image">("image");
 
-  /**
-   * Language code. Auto-detects the user's language if unspecified.
-   */
-  @Input() hl?: string;
+	/**
+	 * Language code. Auto-detects the user's language if unspecified.
+	 */
+	readonly hl = input<string>();
 
-  /**
-   * Tab index
-   */
-  @Input() tabIndex = 0;
+	/**
+	 * Tab index
+	 */
+	readonly tabIndex = input<number>(0);
 
-  /**
-   * Called when captcha receives successful response.
-   * Captcha response token is passed to event.
-   */
-  @Output() success = new EventEmitter<string>();
+	/**
+	 * Called when captcha receives successful response.
+	 * Captcha response token is passed to event.
+	 */
+	readonly success = output<string>();
 
-  /**
-   * Called when captcha is loaded. Event receives id of the captcha
-   */
-  @Output() load = new EventEmitter<void>();
+	/**
+	 * Called when captcha is loaded. Event receives id of the captcha
+	 */
+	readonly load = output<void>();
 
-  /**
-   * Called when captcha is reset.
-   */
-  @Output() reset = new EventEmitter<void>();
+	/**
+	 * Called when captcha is reset.
+	 */
+	readonly reset = output<void>();
 
-  /**
-   * Called when captcha is loaded & ready. I.e. when you need to execute captcha on component load.
-   */
-  @Output() ready = new EventEmitter<void>();
+	/**
+	 * Called when captcha is loaded & ready. I.e. when you need to execute captcha on component load.
+	 */
+	readonly ready = output<void>();
 
-  /**
-   * Error callback
-   */
-  @Output() error = new EventEmitter<void>();
+	/**
+	 * Error callback
+	 */
+	readonly error = output<void>();
 
-  /**
-   * Expired callback
-   */
-  @Output() expire = new EventEmitter<void>();
+	/**
+	 * Expired callback
+	 */
+	readonly expire = output<void>();
 
-  abstract captchaWrapperElem?: ElementRef;
+	abstract captchaWrapperElem?: Signal<ElementRef<any> | undefined>;
 
-  /**
-   * Indicates if captcha should be set on load
-   */
-  private setupAfterLoad = false;
+	/**
+	 * Indicates if captcha should be set on load
+	 */
+	#setupAfterLoad = false;
 
-  /**
-   * Captcha element
-   */
-  protected captchaElem?: HTMLElement;
+	/**
+	 * Captcha element
+	 */
+	protected captchaElem?: HTMLElement;
 
-  /**
-   * Id of the captcha elem
-   */
-  protected captchaId?: number;
+	/**
+	 * Id of the captcha elem
+	 */
+	protected captchaId?: number;
 
-  /**
-   * Holds last response value
-   */
-  protected currentResponse?: string;
+	/**
+	 * Holds last response value
+	 */
+	protected currentResponse?: string;
 
-  /**
-   * If enabled, captcha will reset after receiving success response. This is useful
-   * when invisible captcha need to be resolved multiple times on same page
-   */
-  protected resetCaptchaAfterSuccess = false;
+	/**
+	 * If enabled, captcha will reset after receiving success response. This is useful
+	 * when invisible captcha need to be resolved multiple times on same page
+	 */
+	protected resetCaptchaAfterSuccess = false;
 
-  /**
-   * Captcha type
-   */
-  protected abstract recaptchaType: ReCaptchaType;
+	/**
+	 * Captcha type
+	 */
+	protected abstract recaptchaType: ReCaptchaType;
 
-  /**
-   * Required by ControlValueAccessor
-   */
-  protected onChange: (value: string | undefined) => void = (val) => {};
-  protected onTouched: (value: string | undefined) => void = (val) => {};
+	/**
+	 * Required by ControlValueAccessor
+	 */
+	protected onChange: (value: string | undefined) => void = (val) => { };
+	protected onTouched: (value: string | undefined) => void = (val) => { };
 
-  /**
-   * Indicates if captcha is loaded
-   */
-  public isLoaded = false;
+	/**
+	 * Indicates if captcha is loaded
+	 */
+	isLoaded = false;
 
-  /**
-   * Reference to global reCaptcha API
-   */
-  public reCaptchaApi?: any;
+	/**
+	 * Reference to global reCaptcha API
+	 */
+	reCaptchaApi?: any;
 
-  /**
-   * Id of the DOM element wrapping captcha
-   */
-  public captchaElemId?: string;
+	/**
+	 * Id of the DOM element wrapping captcha
+	 */
+	captchaElemId?: string;
 
-  /**
-   * Form Control to be enable usage in reactive forms
-   */
-  public control?: AbstractControl | null;
+	/**
+	 * Form Control to be enable usage in reactive forms
+	 */
+	control?: AbstractControl | null;
 
-  protected constructor(
-    protected renderer: Renderer2,
-    protected zone: NgZone,
-    protected injector: Injector,
-    protected scriptService: ScriptService
-  ) {}
+	readonly #renderer = inject(Renderer2);
+	readonly #injector = inject(Injector);
+	readonly #scriptService = inject(ScriptService);
 
-  ngAfterViewInit() {
-    this.control = this.injector.get<NgControl | undefined>(
-      NgControl,
-      undefined,
-      InjectFlags.Optional
-    )?.control;
-  }
+	ngAfterViewInit() {
+		this.control = this.#injector.get<NgControl | undefined>(
+			NgControl,
+			undefined,
+			{ optional: true }
+		)?.control;
+	}
 
-  ngAfterViewChecked(): void {
-    if (this.setupCaptcha) {
-      this.setupCaptcha = false;
-      this.setupComponent();
-    }
-  }
+	ngAfterViewChecked(): void {
+		if (this.#setupCaptcha) {
+			this.#setupCaptcha = false;
+			this.#setupComponent();
+		}
+	}
 
-  /**
-   * Gets reCaptcha properties
-   */
-  protected abstract getCaptchaProperties(): any;
+	/**
+	 * Gets reCaptcha properties
+	 */
+	protected abstract getCaptchaProperties(): any;
 
-  /**
-   * Used for captcha specific setup
-   */
-  protected abstract captchaSpecificSetup(): void;
+	/**
+	 * Used for captcha specific setup
+	 */
+	protected abstract captchaSpecificSetup(): void;
 
-  ngOnChanges(changes: SimpleChanges): void {
-    // cleanup scripts if language changed because they need to be reloaded
-    if (changes && changes.hl) {
-      // cleanup scripts when language changes
-      if (
-        !changes.hl.firstChange &&
-        changes.hl.currentValue !== changes.hl.previousValue
-      ) {
-        this.scriptService.cleanup();
-      }
-    }
+	ngOnChanges(changes: SimpleChanges): void {
+		// cleanup scripts if language changed because they need to be reloaded
+		if (changes && changes["hl"]) {
+			// cleanup scripts when language changes
+			if (
+				!changes["hl"].firstChange &&
+				changes["hl"].currentValue !== changes["hl"].previousValue
+			) {
+				this.#scriptService.cleanup();
+			}
+		}
 
-    if (changes && changes.useGlobalDomain) {
-      // cleanup scripts when domain changes
-      if (
-        !changes.useGlobalDomain.firstChange &&
-        changes.useGlobalDomain.currentValue !==
-          changes.useGlobalDomain.previousValue
-      ) {
-        this.scriptService.cleanup();
-      }
-    }
+		if (changes && changes["useGlobalDomain"]) {
+			// cleanup scripts when domain changes
+			if (
+				!changes["useGlobalDomain"].firstChange &&
+				changes["useGlobalDomain"].currentValue !==
+				changes["useGlobalDomain"].previousValue
+			) {
+				this.#scriptService.cleanup();
+			}
+		}
 
-    this.setupCaptcha = true;
-  }
+		this.#setupCaptcha = true;
+	}
 
-  /**
-   * Gets captcha response as per reCaptcha docs
-   */
-  getResponse(): string {
-    return this.reCaptchaApi.getResponse(this.captchaId);
-  }
+	/**
+	 * Gets captcha response as per reCaptcha docs
+	 */
+	getResponse(): string {
+		return this.reCaptchaApi.getResponse(this.captchaId);
+	}
 
-  /**
-   * Gets Id of captcha widget
-   */
-  getCaptchaId(): number | undefined {
-    return this.captchaId;
-  }
+	/**
+	 * Gets Id of captcha widget
+	 */
+	getCaptchaId(): number | undefined {
+		return this.captchaId;
+	}
 
-  /**
-   * Resets captcha
-   */
-  resetCaptcha(): void {
-    this.zone.run(() => {
-      // reset captcha using Google js api
-      this.reCaptchaApi.reset();
+	/**
+	 * Resets captcha
+	 */
+	resetCaptcha(): void {
+		// reset captcha using Google js api
+		this.reCaptchaApi.reset();
 
-      // required due to forms
-      this.onChange(undefined);
-      this.onTouched(undefined);
+		// required due to forms
+		this.onChange(undefined);
+		this.onTouched(undefined);
 
-      // trigger reset event
-      this.reset.next();
-    });
-  }
+		// trigger reset event
+		this.reset.emit();
+	}
 
-  /**
-   * Gets last submitted captcha response
-   */
-  getCurrentResponse(): string | undefined {
-    return this.currentResponse;
-  }
+	/**
+	 * Gets last submitted captcha response
+	 */
+	getCurrentResponse(): string | undefined {
+		return this.currentResponse;
+	}
 
-  /**
-   * Reload captcha. Useful when properties (i.e. theme) changed and captcha need to reflect them
-   */
-  reloadCaptcha(): void {
-    this.setupComponent();
-  }
+	/**
+	 * Reload captcha. Useful when properties (i.e. theme) changed and captcha need to reflect them
+	 */
+	reloadCaptcha(): void {
+		this.#setupComponent();
+	}
 
-  protected ensureCaptchaElem(captchaElemId: string): void {
-    const captchaElem = document.getElementById(captchaElemId);
+	protected ensureCaptchaElem(captchaElemId: string): void {
+		const captchaElem = document.getElementById(captchaElemId);
 
-    if (!captchaElem) {
-      throw Error(`Captcha element with id '${captchaElemId}' was not found`);
-    }
+		if (!captchaElem) {
+			throw Error(`Captcha element with id '${captchaElemId}' was not found`);
+		}
 
-    // assign captcha alem
-    this.captchaElem = captchaElem;
-  }
+		// assign captcha element
+		this.captchaElem = captchaElem;
+	}
 
-  /**
-   * Responsible for instantiating captcha element
-   */
-  protected renderReCaptcha(): void {
-    // run outside angular zone due to timeout issues when testing
-    // details: https://github.com/Enngage/ngx-captcha/issues/26
-    this.zone.runOutsideAngular(() => {
-      // to fix reCAPTCHA placeholder element must be an element or id
-      // https://github.com/Enngage/ngx-captcha/issues/96
-      setTimeout(() => {
-        this.captchaId = this.reCaptchaApi.render(
-          this.captchaElemId,
-          this.getCaptchaProperties()
-        );
-        this.ready.next();
-      }, 0);
-    });
-  }
+	/**
+	 * Responsible for instantiating captcha element
+	 */
+	protected renderReCaptcha(): void {
+		// run outside angular zone due to timeout issues when testing
+		// details: https://github.com/Enngage/ngx-captcha/issues/26
+		// to fix reCAPTCHA placeholder element must be an element or id
+		// https://github.com/Enngage/ngx-captcha/issues/96
+		setTimeout(() => {
+			this.captchaId = this.reCaptchaApi.render(
+				this.captchaElemId,
+				this.getCaptchaProperties()
+			);
+			this.ready.emit();
+		}, 0);
+	}
 
-  /**
-   * Called when captcha receives response
-   * @param callback Callback
-   */
-  protected handleCallback(callback: any): void {
-    this.currentResponse = callback;
-    this.success.next(callback);
+	/**
+	 * Called when captcha receives response
+	 * @param callback Callback
+	 */
+	protected handleCallback(callback: any): void {
+		this.currentResponse = callback;
+		this.success.emit(callback);
 
-    this.zone.run(() => {
-      this.onChange(callback);
-      this.onTouched(callback);
-    });
+		this.onChange(callback);
+		this.onTouched(callback);
 
-    if (this.resetCaptchaAfterSuccess) {
-      this.resetCaptcha();
-    }
-  }
+		if (this.resetCaptchaAfterSuccess) {
+			this.resetCaptcha();
+		}
+	}
 
-  private getPseudoUniqueNumber(): number {
-    return new Date().getUTCMilliseconds() + Math.floor(Math.random() * 9999);
-  }
+	#getPseudoUniqueNumber(): number {
+		return new Date().getUTCMilliseconds() + Math.floor(Math.random() * 9999);
+	}
 
-  private setupComponent(): void {
-    // captcha specific setup
-    this.captchaSpecificSetup();
+	#setupComponent(): void {
+		// captcha specific setup
+		this.captchaSpecificSetup();
 
-    // create captcha wrapper
-    this.createAndSetCaptchaElem();
+		// create captcha wrapper
+		this.#createAndSetCaptchaElem();
 
-    this.scriptService.registerCaptchaScript(
-      {
-        useGlobalDomain: this.useGlobalDomain,
-        useEnterprise: this.useEnterprise,
-      },
-      "explicit",
-      (grecaptcha) => {
-        this.onloadCallback(grecaptcha);
-      },
-      this.hl
-    );
-  }
+		this.#scriptService.registerCaptchaScript(
+			{
+				useGlobalDomain: this.useGlobalDomain(),
+				useEnterprise: this.useEnterprise(),
+			},
+			"explicit",
+			(grecaptcha) => {
+				this.#onloadCallback(grecaptcha);
+			},
+			this.hl()
+		);
+	}
 
-  /**
-   * Called when google's recaptcha script is ready
-   */
-  private onloadCallback(grecapcha: any): void {
-    // assign reference to reCaptcha Api once its loaded
-    this.reCaptchaApi = grecapcha;
+	/**
+	 * Called when google's recaptcha script is ready
+	 */
+	#onloadCallback(grecapcha: any): void {
+		// assign reference to reCaptcha Api once its loaded
+		this.reCaptchaApi = grecapcha;
 
-    if (!this.reCaptchaApi) {
-      throw Error(`ReCaptcha Api was not initialized correctly`);
-    }
+		if (!this.reCaptchaApi) {
+			throw Error(`ReCaptcha Api was not initialized correctly`);
+		}
 
-    // loaded flag
-    this.isLoaded = true;
+		// loaded flag
+		this.isLoaded = true;
 
-    // fire load event
-    this.load.next();
+		// fire load event
+		this.load.emit();
 
-    // render captcha
-    this.renderReCaptcha();
+		// render captcha
+		this.renderReCaptcha();
 
-    // setup component if it was flagged as such
-    if (this.setupAfterLoad) {
-      this.setupAfterLoad = false;
-      this.setupComponent();
-    }
-  }
+		// setup component if it was flagged as such
+		if (this.#setupAfterLoad) {
+			this.#setupAfterLoad = false;
+			this.#setupComponent();
+		}
+	}
 
-  private generateNewElemId(): string {
-    return this.captchaElemPrefix + this.getPseudoUniqueNumber();
-  }
+	#generateNewElemId(): string {
+		return this.captchaElemPrefix + this.#getPseudoUniqueNumber();
+	}
 
-  private createAndSetCaptchaElem(): void {
-    // generate new captcha id
-    this.captchaElemId = this.generateNewElemId();
+	#createAndSetCaptchaElem(): void {
+		// generate new captcha id
+		this.captchaElemId = this.#generateNewElemId();
 
-    if (!this.captchaElemId) {
-      throw Error(`Captcha elem Id is not set`);
-    }
+		if (!this.captchaElemId) {
+			throw Error(`Captcha elem Id is not set`);
+		}
 
-    if (!this.captchaWrapperElem) {
-      throw Error(`Captcha DOM element is not initialized`);
+		if (!this.captchaWrapperElem?.()) {
+			throw Error(`Captcha DOM element is not initialized`);
+		}
+
+		// remove old html
+    if (this.captchaWrapperElem()) {
+      this.captchaWrapperElem()!.nativeElement.innerHTML = "";
     }
 
-    // remove old html
-    this.captchaWrapperElem.nativeElement.innerHTML = "";
+		// create new wrapper for captcha
+		const newElem = this.#renderer.createElement("div");
+		newElem.id = this.captchaElemId;
 
-    // create new wrapper for captcha
-    const newElem = this.renderer.createElement("div");
-    newElem.id = this.captchaElemId;
+		this.#renderer.appendChild(this.captchaWrapperElem()?.nativeElement, newElem);
 
-    this.renderer.appendChild(this.captchaWrapperElem.nativeElement, newElem);
+		// when use captcha in cdk stepper then throwing error Captcha element with id 'ngx_captcha_id_XXXX' not found
+		// to fix it checking ensureCaptchaElem in timeout so that its check in next call and its able to find element
+		setTimeout(() => {
+			// update captcha elem
+			if (this.captchaElemId) {
+				this.ensureCaptchaElem(this.captchaElemId);
+			}
+		}, 0);
+	}
 
-    // when use captcha in cdk stepper then throwing error Captcha element with id 'ngx_captcha_id_XXXX' not found
-    // to fix it checking ensureCaptchaElem in timeout so that its check in next call and its able to find element
-    setTimeout(() => {
-      // update captcha elem
-      if (this.captchaElemId) {
-        this.ensureCaptchaElem(this.captchaElemId);
-      }
-    }, 0);
-  }
+	/**
+	 * To be aligned with the ControlValueAccessor interface we need to implement this method
+	 * However as we don't want to update the recaptcha, this doesn't need to be implemented
+	 */
+	writeValue(obj: any): void { }
 
-  /**
-   * To be aligned with the ControlValueAccessor interface we need to implement this method
-   * However as we don't want to update the recaptcha, this doesn't need to be implemented
-   */
-  public writeValue(obj: any): void {}
+	/**
+	 * This method helps us tie together recaptcha and our formControl values
+	 */
+	registerOnChange(fn: any): void {
+		this.onChange = fn;
+	}
 
-  /**
-   * This method helps us tie together recaptcha and our formControl values
-   */
-  public registerOnChange(fn: any): void {
-    this.onChange = fn;
-  }
+	/**
+	 * At some point we might be interested whether the user has touched our component
+	 */
+	registerOnTouched(fn: any): void {
+		this.onTouched = fn;
+	}
 
-  /**
-   * At some point we might be interested whether the user has touched our component
-   */
-  public registerOnTouched(fn: any): void {
-    this.onTouched = fn;
-  }
+	/**
+	 * Handles error callback
+	 */
+	protected handleErrorCallback(): void {
+		this.onChange(undefined);
+		this.onTouched(undefined);
 
-  /**
-   * Handles error callback
-   */
-  protected handleErrorCallback(): void {
-    this.zone.run(() => {
-      this.onChange(undefined);
-      this.onTouched(undefined);
-    });
+		this.error.emit();
+	}
 
-    this.error.next();
-  }
+	/**
+	 * Handles expired callback
+	 */
+	protected handleExpireCallback(): void {
+		this.expire.emit();
 
-  /**
-   * Handles expired callback
-   */
-  protected handleExpireCallback(): void {
-    this.expire.next();
-
-    // reset captcha on expire callback
-    this.resetCaptcha();
-  }
+		// reset captcha on expire callback
+		this.resetCaptcha();
+	}
 }

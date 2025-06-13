@@ -3,8 +3,8 @@ import { AfterViewInit, Component, ChangeDetectionStrategy } from '@angular/core
 declare var hljs: any;
 
 @Component({
-  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './installation.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class InstallationComponent implements AfterViewInit {
 
@@ -50,10 +50,10 @@ export class AppModule { }
 `;
 
   ngAfterViewInit(): void {
-    this.highlight();
+    this.#highlight();
   }
 
-  private highlight(): void {
+  #highlight(): void {
     const highlightBlocks = document.getElementsByTagName('code');
     for (let i = 0; i < highlightBlocks.length; i++) {
       const block = highlightBlocks[i];
